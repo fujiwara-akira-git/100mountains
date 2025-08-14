@@ -2,18 +2,49 @@
 import Image from "next/image";
 import { useState } from "react";
 import { supabase } from "@/lib/supabase/client";
+import type { Mountain } from "@/types/mountain";
 
 export default function Home() {
   const [status, setStatus] = useState<string | null>(null);
+  const [q, setQ] = useState("");
+  const [pref, setPref] = useState("");
+  const [items, setItems] = useState<Mountain[]>([]);
+  const [total, setTotal] = useState<number>(0);
+  const [loading, setLoading] = useState(false);
+  const [err, setErr] = useState<string | null>(null);
+
   const testSupabase = async () => {
     setStatus("Checking Supabase...");
     try {
-      const { data, error } = await supabase.from("_ping").select("count(*)").limit(1);
+      const { data, error } = await supabase.from("mountains").select("count(*)").limit(1);
       if (error) throw error;
-      setStatus(`Supabase OK${data ? " (table _ping exists)" : ""}`);
+      setStatus(`Supabase OK${data ? " (table mountains reachable)" : ""}`);
     } catch (e: unknown) {
       const msg = e instanceof Error ? e.message : String(e);
       setStatus(`Supabase error: ${msg}`);
+    }
+  };
+
+  const fetchMountains = async () => {
+    setLoading(true);
+    setErr(null);
+    try {
+      const params = new URLSearchParams();
+      if (q.trim()) params.set("q", q.trim());
+      if (pref.trim()) params.set("prefecture", pref.trim());
+      params.set("limit", "20");
+      params.set("offset", "0");
+      params.set("sort", "elevation:desc");
+      const res = await fetch(`/api/mountains?${params.toString()}`);
+      const json = await res.json();
+      if (!res.ok) throw new Error(json?.error ?? "Failed to fetch");
+      setItems(json.items ?? []);
+      setTotal(json.total ?? 0);
+    } catch (e: unknown) {
+      const msg = e instanceof Error ? e.message : String(e);
+      setErr(msg);
+    } finally {
+      setLoading(false);
     }
   };
   return (
@@ -74,6 +105,41 @@ export default function Home() {
         {status && (
           <p className="text-sm text-center sm:text-left text-gray-600 dark:text-gray-300">{status}</p>
         )}
+
+        <section className="mt-6 w-full max-w-xl">
+          <h2 className="text-lg font-semibold mb-2">Mountains</h2>
+          <div className="flex flex-col sm:flex-row gap-2 mb-3">
+            <input
+              value={q}
+              onChange={(e) => setQ(e.target.value)}
+              placeholder="Search (name / name_kana)"
+              className="w-full sm:w-auto flex-1 rounded-md border px-3 py-2 bg-background text-foreground"
+            />
+            <input
+              value={pref}
+              onChange={(e) => setPref(e.target.value)}
+              placeholder="Prefecture (e.g. 静岡県)"
+              className="w-full sm:w-auto flex-1 rounded-md border px-3 py-2 bg-background text-foreground"
+            />
+            <button
+              onClick={fetchMountains}
+              className="rounded-md border px-4 py-2 font-medium hover:bg-[#f2f2f2] dark:hover:bg-[#1a1a1a]"
+              disabled={loading}
+            >
+              {loading ? "Loading..." : "Load"}
+            </button>
+          </div>
+          {err && <p className="text-sm text-red-600">{err}</p>}
+          <p className="text-sm text-gray-600 dark:text-gray-300 mb-2">Total: {total}</p>
+          <ul className="space-y-1">
+            {items.map((m) => (
+              <li key={m.id} className="text-sm">
+                <span className="font-medium">{m.name}</span>
+                {" "}({m.prefecture}) - {m.elevation}m
+              </li>
+            ))}
+          </ul>
+        </section>
       </main>
       <footer className="row-start-3 flex gap-[24px] flex-wrap items-center justify-center">
         <a

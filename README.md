@@ -27,6 +27,19 @@ import { supabase } from "@/lib/supabase/client";
 
 The home page includes a simple “Test Supabase” button to try a basic query.
 
+### 2.5) Database Schema
+Run the schema and optional seed in Supabase SQL editor (or via CLI):
+
+```
+-- schema
+-- paste contents of supabase/schema.sql
+
+-- seed (optional)
+-- paste contents of supabase/seed.sql
+```
+
+Types used in the frontend live at `src/types/mountain.ts`.
+
 ### 3) GitHub Setup
 - Create a new GitHub repository and add it as a remote:
 	- `git remote add origin https://github.com/<you>/<repo>.git`
